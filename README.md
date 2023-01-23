@@ -1,6 +1,6 @@
 # uptime-kuma-agent
 
-This python script is an agent for [uptime-kuma](https://github.com/louislam/uptime-kuma). It uses the push monitor of [uptime-kuma](https://github.com/louislam/uptime-kuma) to create monitoring events.
+This python script is an agent for [uptime-kuma](https://github.com/louislam/uptime-kuma). It uses the push monitor to create monitoring events.
 
 You can use nagios-plugins or self written checks to monitor your systems.
 
