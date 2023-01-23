@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
+"""
+A script to run monitoring checks on a system and
+push the result to uptime-kuma instance.
+"""
 
 from argparse import ArgumentParser
+import sys
 import logging
-import shlex, subprocess
+import shlex
+import subprocess
 import requests
 import yaml
-import sys
 
 def create_parser():
+    """
+    create a parser with ArgumentParser to parse arguments
+    """
     parser = ArgumentParser()
     parser.add_argument(
         '-c','--config-file',
@@ -25,62 +33,73 @@ logging.basicConfig(
     datefmt="%d/%m/%y %H:%M:%S",
 )
 
-def execute_check(check):
-    p = subprocess.Popen(
-            shlex.split(check),
+def load_configuration(config_file):
+    """
+    load the configuration file
+    """
+    try:
+        with open(config_file, 'r', encoding = 'utf-8') as file:
+            try:
+                configuration = yaml.safe_load(file)
+            except yaml.scanner.ScannerError:
+                logging.error("Cant't read yml file")
+                sys.exit(2)
+    except OSError as err:
+        logging.error("%s", err)
+        sys.exit(2)
+    return configuration
+
+def execute_check(chk):
+    """
+    execute a configuration given check and return a message
+    and a status as result
+    """
+    with subprocess.Popen(
+            shlex.split(chk),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
-        )
-    out, err = p.communicate()
-    if p.returncode == 0:
-        if 'nagios' in check:
-            msg = out.decode('utf-8').split('|')[0].replace(' ','+').replace(';','')
-            status = 'up'
+        ) as process:
+        out, err = process.communicate()
+    if process.returncode == 0:
+        if 'nagios' in chk:
+            mes = out.decode('utf-8').split('|', maxsplit = 1)[0].replace(' ','+').replace(';','') # pylint: disable=line-too-long
+            sta = 'up'
         else:
-            msg = out.decode('utf-8')
-            status = 'up'
-    if p.returncode >= 1 and p.returncode <= 3:
-        if 'nagios' in check:
-            msg = out.decode('utf-8').split('|')[0].replace(' ','+').replace(';','')
-            status = 'down'
+            mes = out.decode('utf-8')
+            sta = 'up'
+    if process.returncode >= 1 and process.returncode <= 3:
+        if 'nagios' in chk:
+            mes = out.decode('utf-8').split('|', maxsplit = 1)[0].replace(' ','+').replace(';','') # pylint: disable=line-too-long
+            sta = 'down'
         else:
-            msg = out.decode('utf-8')
-            status = 'down'
-    if p.returncode >= 3:
-        logging.error(f"{out.decode('utf-8')}")
-        msg = 'UNKNOWN'
-        status = 'down'
-    return msg, status
+            mes = out.decode('utf-8')
+            sta = 'down'
+    if process.returncode >= 3:
+        logging.error("%s", out.decode('utf-8'))
+        logging.error("%s", err.decode('utf-8'))
+        mes = 'UNKNOWN'
+        sta = 'down'
+    return mes, sta
 
-def push_notification(msg, status, token, url):
+def push_event(msg, status, token, url):
+    """
+    push event to uptime-kuma monitoring instance
+    """
     url = 'https://' + url + '/api/push/' + token + '?status=' + status + '&msg=' + msg
     try:
         requests.get(url, timeout=10)
     except TimeoutError:
-        logging.error(f"Timeout for url: {url}")
+        logging.error("Timeout for url: %s", url)
     except ConnectionError:
-        logging.error(f"Can't connect to url: {url}")
-
-def load_configuration(config_file):
-    try:
-        with open(config_file, 'r') as f:
-            try:
-                config = yaml.safe_load(f)
-            except yaml.scanner.ScannerError:
-                logging.error(f"Cant't read yml file")
-                sys.exit(2)
-    except OSError as err:
-        logging.error(f"{err}")
-        sys.exit(2)
-    return config
+        logging.error("Can't connect to url: %s", url)
 
 config = load_configuration(config_file=args.config_file)
 
 for check in config['checks']:
-    msg, status = execute_check(check = check['command'])
-    push_notification(
-        msg = msg,
-        status = status,
+    message, state = execute_check(chk = check['command'])
+    push_event(
+        msg = message,
+        status = state,
         token = check['token'],
         url = config['url']
     )
