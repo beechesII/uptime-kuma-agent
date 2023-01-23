@@ -2,9 +2,9 @@
 
 This python script is an agent for [uptime-kuma](https://github.com/louislam/uptime-kuma). It uses the push monitor of [uptime-kuma](https://github.com/louislam/uptime-kuma) to create monitoring events.
 
-You can use nagios-plugins or self written checks to check your systems.
+You can use nagios-plugins or self written checks to monitor your systems.
 
-Feel free to contribute.
+Feel free to [contribute](CONTRIBUTING.md).
 
 ## Requirements
 
@@ -37,7 +37,9 @@ chmod +x ~/agent.py
 
 Configure cronjob:
 ```bash
-crontab -e
-
 */5 * * * * ~/agent.py -c ~/configuration.yml
 ```
+
+## License
+
+GPLv3
