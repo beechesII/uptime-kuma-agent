@@ -29,6 +29,8 @@ checks:
     token: 'w5cC95KjLF'
 ```
 
+Note: Configure the URL without `https://` protocol in front of your domain. Otherwise you will receive a connection error.
+
 Download and install agent.py:
 ```bash
 curl -s https://raw.githubusercontent.com/beechesII/uptime-kuma-agent/main/agent.py -o ~/agent.py
